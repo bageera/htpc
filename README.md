@@ -45,8 +45,8 @@ This project was heavily inspired by the [MediaBox](https://github.com/tom472/me
 3. [Setup Samba Share](https://help.ubuntu.com/community/How%20to%20Create%20a%20Network%20Share%20Via%20Samba%20Via%20CLI%20%28Command-line%20interface/Linux%20Terminal%29%20-%20Uncomplicated%2C%20Simple%20and%20Brief%20Way%21) (to access media outside of HTPC)
 4. [Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository)
 5. [Install Docker Compose](https://docs.docker.com/compose/install/#install-compose)
-6. Clone Repo `git clone https://github.com/phikai/htpc-docker-standup.git`
-7. Copy Sample Environement File `cp sample.env .env`
+6. Clone Repo `git clone https://github.com/bageera/htpc.git`
+7. Copy Sample Environement File `cp .env.example .env`
 8. Edit `.env` to match your environment
 9. Run Docker Environment `docker-compose up -d`
 10. ???
@@ -65,6 +65,8 @@ This project was heavily inspired by the [MediaBox](https://github.com/tom472/me
 [Potential Script to setup, renew and copy SSL for Plex](https://www.npcglib.org/~stathis/blog/2017/05/13/plex-media-server-over-https-with-letsencrypt-certificates/)
 
 ---
+
+This project was forked so donate to phikai if this works for you
 
 If this project has helped you in anyway, and you'd like to say thanks...
 
