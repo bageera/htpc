@@ -1,1 +1,15 @@
 .env
+/docker/*
+/hydra2/*
+/lidarr/*
+/jackett/*
+/muximux/*
+/nginx-proxy/*
+/pihole/*
+/plex/*
+/sonarr/*
+/radarr/*
+letsencrypt/*
+portainer/*
+sabnzbd/*
+calibre/*
