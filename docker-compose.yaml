@@ -132,7 +132,7 @@ services:
     pihole:
         image: pihole/pihole
         container_name: pihole
-        restart: unless-stopped
+        restart: on-failure
         ports:
             - '${IP_ADDRESS}:53:53/tcp'
             - '${IP_ADDRESS}:53:53/udp'
@@ -149,6 +149,7 @@ services:
             - './pihole:/etc/pihole/'
             - './pihole/dnsmasq:/etc/dnsmasq.d/'
 
+        
     # ----------------------------------------
     # JACKETT
     # RSS/TORZNAB Feed Creator
@@ -315,8 +316,8 @@ services:
     # Automatic Update Service for Docker VMs
     # ----------------------------------------
     watchtower:
-        image: v2tec/watchtower:latest
-        container_name: watchtower
+        image: kopfkrieg/watchtower
+        container_name: tower
         restart: unless-stopped
         environment:
             - TZ=${TZ}
