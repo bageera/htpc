@@ -193,7 +193,7 @@ services:
         image: linuxserver/sonarr
         container_name: sonarr
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:8989:8989'
         environment:
@@ -210,6 +210,22 @@ services:
             - '/data/video/watch:/watch'
             - '/data/video/TV:/data/tv'
             - '/etc/localtime:/etc/localtime:ro'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=sonarr"
+            - "traefik.frontend.rule=Host:sonarr.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=8989"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
     # ----------------------------------------
     # SONARR
     # TV Series Management
@@ -218,7 +234,7 @@ services:
         image: linuxserver/lidarr
         container_name: lidarr
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:8686:8686'
         environment:
@@ -235,6 +251,22 @@ services:
             - '/data/video/watch:/watch'
             - '/data/music:/music:rw'
             - '/etc/localtime:/etc/localtime:ro'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=lidarr"
+            - "traefik.frontend.rule=Host:lidarr.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=8686"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
     # ----------------------------------------
     # RADARR
@@ -244,7 +276,7 @@ services:
         image: linuxserver/radarr
         container_name: radarr
         restart: unless-stopped
-        network_mode: "bridge"
+        network_mode: "traefik_proxy"
         ports:
             - '${IP_ADDRESS}:7878:7878'
         environment:
@@ -260,6 +292,22 @@ services:
             - '/data/video/unprocessed:/unprocessed'
             - '/data/video/Movies:/data/movies:rw'
             - '/etc/localtime:/etc/localtime:ro'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=radarr"
+            - "traefik.frontend.rule=Host:radarr.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=7878"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
     pihole:
         image: pihole/pihole
@@ -390,7 +438,7 @@ services:
         image: linuxserver/muximux
         container_name: muximux
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:8080:80'
         environment:
@@ -402,6 +450,22 @@ services:
         volumes:
             - './muximux:/config'
             - '/etc/localtime:/etc/localtime:ro'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=minumix"
+            - "traefik.frontend.rule=Host:manage.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=80"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
     # ----------------------------------------
     # WATCHTOWER
     # Automatic Update Service for Docker VMs
