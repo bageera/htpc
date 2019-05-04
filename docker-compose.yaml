@@ -11,13 +11,51 @@
 ##
 ## Have docker-compose.yml and .env in the same directory to launch the stack
 
-version: '2'
+version: '3'
 
 ######################
 # SERVICES TO LAUNCH #
 ######################
 
 services:
+
+    traefik:
+        hostname: traefik
+        image: traefik:latest
+        container_name: traefik
+        restart: always
+        domainname: alpha.${DOMAIN}
+        networks:
+        - default
+        - traefik_proxy
+        ports:
+        - "80:80"
+        - "443:443"
+        - "8088:8080"
+        environment:
+        - CLOUDNS_AUTH_ID=${CLOUDNS_AUTH_ID}
+        - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
+        labels:
+        - "traefik.enable=true"
+        - "traefik.backend=traefik"
+        - "traefik.frontend.rule=Host:traefik.${DOMAIN}"  
+    #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
+        - "traefik.port=8080"
+        - "traefik.docker.network=traefik_proxy"
+        - "traefik.frontend.headers.SSLRedirect=true"
+        - "traefik.frontend.headers.STSSeconds=315360000"
+        - "traefik.frontend.headers.browserXSSFilter=true"
+        - "traefik.frontend.headers.contentTypeNosniff=true"
+        - "traefik.frontend.headers.forceSTSHeader=true"
+        - "traefik.frontend.headers.SSLHost=panther.local"
+        - "traefik.frontend.headers.STSIncludeSubdomains=true"
+        - "traefik.frontend.headers.STSPreload=true"
+        - "traefik.frontend.headers.frameDeny=true"
+
+        volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ${USERDIR}/docker/traefik:/etc/traefik
+        - ${USERDIR}/docker/tf/shared:/shared
     # ----------------------------------------
     # PLEX
     # Robust Media Server
@@ -50,9 +88,103 @@ services:
             - '/data/video/Movies:/data/movies'
             - '/data/video/TV:/data/tv'
             - '/data/music/:/data/music'
+            - '/data/photo/:/data/photo'
             - '/etc/localtime:/etc/localtime:ro'
 
-
+    tautulli:
+        container_name: tautulli
+        restart: always
+        image: linuxserver/tautulli
+        volumes:
+            - ${USERDIR}/docker/tautulli/config:/config
+            - ${USERDIR}/docker/tautulli/logs:/logs:ro
+            - ${USERDIR}/docker/shared:/shared
+        #    ports:
+        #      - "XXXX:8181"
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        networks:
+            - traefik_proxy
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=tautulli"
+            - "traefik.frontend.rule=Host:tautulli.${DOMAIN}"
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefix: /tautulli"
+            - "traefik.port=8181"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
+    ombi:
+        container_name: ombi
+        restart: always
+        image: linuxserver/ombi
+        volumes:
+            - ${USERDIR}/docker/ombi:/config
+            - ${USERDIR}/docker/shared:/shared
+    #    ports:
+    #      - "XXXX:3579"
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        networks:
+            - traefik_proxy
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=ombi"
+            - "traefik.frontend.rule=Host:ombi.${DOMAIN}"
+    #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefix: /ombi"
+            - "traefik.port=3579"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
+    organizr:
+        container_name: organizr
+        restart: always
+        image: lsiocommunity/organizr
+        volumes:
+            - ${USERDIR}/docker/organizr:/config
+            - ${USERDIR}/docker/shared:/shared
+    #    ports:
+    #      - "XXXX:80"
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        networks:
+            - traefik_proxy
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=organizr"
+            - "traefik.frontend.rule=Host:organizr.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=80"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
     # ----------------------------------------
     # SONARR
     # TV Series Management
@@ -141,37 +273,15 @@ services:
             - ServerIP=${IP_ADDRESS}
             - PUID=${PUID}
             - PGID=${PGID}
-            - WEBPASSWORD='admin'
-            - DNS1="8.8.8.8"
-            - DNS2="8.8.4.4"
+            - WEBPASSWORD="admin"
+            - VIRTUAL_HOST=pi.${DOMAIN}
+            - DNS1="9.9.9.9"
+            - DNS2="149.112.112.112"
 
         volumes:
             - './pihole:/etc/pihole/'
             - './pihole/dnsmasq:/etc/dnsmasq.d/'
 
-        
-    # ----------------------------------------
-    # JACKETT
-    # RSS/TORZNAB Feed Creator
-    # ----------------------------------------
-    jackett:
-        image: linuxserver/jackett
-        #build: https://github.com/linuxserver/docker-jackett.git
-        container_name: jackett
-        restart: unless-stopped
-        network_mode: 'bridge'
-        ports:
-            - '${IP_ADDRESS}:9117:9117'
-        environment:
-            - PUID=${PUID}
-            - PGID=${PGID}
-            - VIRTUAL_HOST=jackett.${DOMAIN}
-            - LETSENCRYPT_HOST=jackett.${DOMAIN}
-            - LETSENCRYPT_EMAIL=${EMAIL}
-        volumes:
-            - './jackett:/config'
-            - '/data/video/downloads:/downloads'
-            - '/etc/localtime:/etc/localtime:ro'
 
     # ------------------------------------------
     # SABNZBD
@@ -231,25 +341,6 @@ services:
             - '${IP_ADDRESS}:8118:8118'
             - '${IP_ADDRESS}:58846:58846'
             - '${IP_ADDRESS}:58946:58946'
-        restart: unless-stopped
-        environment:
-            - PUID=${PUID}
-            - PGID=${PGID}
-            - TZ=${TZ} 
-            - LAN_NETWORK=${CIDR_ADDRESS}
-
-    headphones:
-        image: "linuxserver/headphones"
-        container_name: "headphones"
-        network_mode: "bridge"
-        volumes:
-            - ./docker/headphones:/config
-            - '/data/video/completed:/completed'
-            - '/data/video/downloads:/downloads'
-            - '/data/video/unprocessed:/unprocessed'
-            - '/data/music:/music:rw'
-        ports:
-            - '${IP_ADDRESS}:8181:8181'
         restart: unless-stopped
         environment:
             - PUID=${PUID}
@@ -360,43 +451,12 @@ services:
             - '/var/run/docker.sock:/var/run/docker.sock'
 
 
-    # ----------------------------------------
-    # NGINX-PROXY
-    # Pretty Hostname Support for Services
-    # ----------------------------------------
-    nginx-proxy:
-        image: jwilder/nginx-proxy:alpine
-        container_name: nginx-proxy
-        restart: unless-stopped
-        network_mode: 'bridge'
-        ports:
-            - '80:80'
-            - '443:443'
-        environment:
-            - PUID=${PUID}
-            - PGID=${PGID}
-        volumes:
-            - './nginx-proxy/etc/nginx/vhost.d:/etc/nginx/vhost.d'
-            - './nginx-proxy/usr/share/nginx/html:/usr/share/nginx/html'
-            - './letsencrypt/certs:/etc/nginx/certs:ro'
-            - '/etc/localtime:/etc/localtime:ro'
-            - '/var/run/docker.sock:/tmp/docker.sock:ro'
 
-    # ----------------------------------------
-    # LETS ENCRYPT
-    # SSL Support Companion for nginx-proxy
-    # ----------------------------------------
-    letsencrypt-nginx-proxy-companion:
-        image: jrcs/letsencrypt-nginx-proxy-companion
-        container_name: letsencrypt
-        restart: unless-stopped
-        network_mode: 'bridge'
-        environment:
-            - PUID=${PUID}
-            - PGID=${PGID}
-        volumes:
-            - './letsencrypt/certs:/etc/nginx/certs:rw'
-            - '/etc/localtime:/etc/localtime:ro'
-            - '/var/run/docker.sock:/var/run/docker.sock:ro'
-        volumes_from:
-            - 'nginx-proxy'
+
+
+networks:
+  traefik_proxy:
+    external:
+      name: traefik_proxy
+  default:
+    driver: bridge
