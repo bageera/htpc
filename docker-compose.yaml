@@ -26,36 +26,36 @@ services:
         restart: always
         domainname: alpha.${DOMAIN}
         networks:
-        - default
-        - traefik_proxy
+            - default
+            - traefik_proxy
         ports:
-        - "80:80"
-        - "443:443"
-        - "8088:8080"
+            - "80:80"
+            - "443:443"
+            - "8088:8080"
         environment:
-        - CLOUDNS_AUTH_ID=${CLOUDNS_AUTH_ID}
-        - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
+            - CLOUDNS_AUTH_ID=${CLOUDNS_AUTH_ID}
+            - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
         labels:
-        - "traefik.enable=true"
-        - "traefik.backend=traefik"
-        - "traefik.frontend.rule=Host:traefik.${DOMAIN}"  
-    #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
-        - "traefik.port=8080"
-        - "traefik.docker.network=traefik_proxy"
-        - "traefik.frontend.headers.SSLRedirect=true"
-        - "traefik.frontend.headers.STSSeconds=315360000"
-        - "traefik.frontend.headers.browserXSSFilter=true"
-        - "traefik.frontend.headers.contentTypeNosniff=true"
-        - "traefik.frontend.headers.forceSTSHeader=true"
-        - "traefik.frontend.headers.SSLHost=panther.local"
-        - "traefik.frontend.headers.STSIncludeSubdomains=true"
-        - "traefik.frontend.headers.STSPreload=true"
-        - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.enable=true"
+            - "traefik.backend=traefik"
+            - "traefik.frontend.rule=Host:traefik.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
+            - "traefik.port=8080"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
         volumes:
-        - /var/run/docker.sock:/var/run/docker.sock:ro
-        - ${USERDIR}/docker/traefik:/etc/traefik
-        - ${USERDIR}/docker/tf/shared:/shared
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ${USERDIR}/docker/traefik:/etc/traefik
+            - ${USERDIR}/docker/tf/shared:/shared
     # ----------------------------------------
     # PLEX
     # Robust Media Server
@@ -339,7 +339,7 @@ services:
         image: linuxserver/sabnzbd
         container_name: sabnzbd
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:9090:8080'
         environment:
@@ -356,6 +356,22 @@ services:
             - '/data/video/Movies:/data/movies:rw'
             - '/data/video/unprocessed:/incomplete-downloads'
             - '/etc/localtime:/etc/localtime:ro'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=sabnzbd"
+            - "traefik.frontend.rule=Host:sab.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=8080"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
     hydra2:
         image: "linuxserver/hydra2"
@@ -415,7 +431,7 @@ services:
         image: portainer/portainer:latest
         container_name: portainer
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:9000:9000'
         environment:
@@ -429,6 +445,22 @@ services:
             - '/var/run/docker.sock:/var/run/docker.sock'
             - '/etc/localtime:/etc/localtime:ro'
         command: --no-auth
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=portainer"
+            - "traefik.frontend.rule=Host:portainer.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=9000"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
     # ----------------------------------------
     # MUXIMUX
@@ -497,7 +529,7 @@ services:
         image: titpetric/netdata
         container_name: netdata
         restart: unless-stopped
-        network_mode: 'bridge'
+        network_mode: 'traefik_proxy'
         ports:
             - '${IP_ADDRESS}:19999:19999'
         environment:
@@ -513,6 +545,22 @@ services:
             - '/sys:/host/sys:ro'
             - '/etc/localtime:/etc/localtime:ro'
             - '/var/run/docker.sock:/var/run/docker.sock'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=netdata"
+            - "traefik.frontend.rule=Host:netdata.${DOMAIN}"  
+        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.port=19999"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.frontend.headers.SSLRedirect=true"
+            - "traefik.frontend.headers.STSSeconds=315360000"
+            - "traefik.frontend.headers.browserXSSFilter=true"
+            - "traefik.frontend.headers.contentTypeNosniff=true"
+            - "traefik.frontend.headers.forceSTSHeader=true"
+            - "traefik.frontend.headers.SSLHost=panther.local"
+            - "traefik.frontend.headers.STSIncludeSubdomains=true"
+            - "traefik.frontend.headers.STSPreload=true"
+            - "traefik.frontend.headers.frameDeny=true"
 
 
 
