@@ -11,7 +11,7 @@
 ##
 ## Have docker-compose.yml and .env in the same directory to launch the stack
 
-version: '3'
+version: '3.2'
 
 ######################
 # SERVICES TO LAUNCH #
@@ -25,37 +25,43 @@ services:
         container_name: traefik
         restart: always
         domainname: alpha.${DOMAIN}
+        command: 
+            - "--providers.docker=true"
+            - "--entrypoints.web.address=:80"
+            - "--entrypoints.websecure.address=:443"
         networks:
             - default
             - traefik_proxy
         ports:
             - "80:80"
-            - "443:443"
             - "8088:8080"
+            - "443:443"
         environment:
             - CLOUDNS_AUTH_ID=${CLOUDNS_AUTH_ID}
             - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
+
         labels:
             - "traefik.enable=true"
             - "traefik.backend=traefik"
-            - "traefik.frontend.rule=Host:traefik.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
-            - "traefik.port=8080"
+            - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+            - "traefik.http.routers.api.rule=Host(`traefik.${DOMAINNAME}`)"
+            - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.http.routers.traefik.entrypoints=web"
+            - "traefik.http.middlewares.traefik-auth.basicauth.users=${TFUSER}:${TFPASSWORD}"
+            - "traefik.http.routers.traefik-secure.entrypoints=web-secure"
+            - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAINNAME}`)"
+            - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+            - "traefik.http.routers.traefik-secure.tls=true"
+            - "traefik.http.routers.traefik-secure.tls.options=default"
+            - "traefik.http.routers.traefik-secure.tls.certresolver=http"
+            - "traefik.http.routers.traefik-secure.service=api@internal"
 
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - ${USERDIR}/docker/traefik:/etc/traefik
             - ${USERDIR}/docker/tf/shared:/shared
+
     # ----------------------------------------
     # PLEX
     # Robust Media Server
@@ -83,12 +89,12 @@ services:
             - PLEX_GID=${PGID}
         hostname: ${HOSTNAME}
         volumes:
-            - './plex:/config'
-            - './plex/transcode:/transcode'
-            - '/data/video/Movies:/data/movies'
-            - '/data/video/TV:/data/tv'
-            - '/data/music/:/data/music'
-            - '/data/photo/:/data/photo'
+            - '${USERDIR}/plex:/config'
+            - '${USERDIR}/plex/transcode:/transcode'
+            - '${DATADIR}/video/Movies:/data/movies'
+            - '${DATADIR}/video/TV:/data/tv'
+            - '${DATADIR}/music:/data/music'
+            - '${DATADIR}/photo/:/data/photo'
             - '/etc/localtime:/etc/localtime:ro'
 
     tautulli:
@@ -110,19 +116,10 @@ services:
         labels:
             - "traefik.enable=true"
             - "traefik.backend=tautulli"
-            - "traefik.frontend.rule=Host:tautulli.${DOMAIN}"
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefix: /tautulli"
+            - "traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)"
             - "traefik.port=8181"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+
     ombi:
         container_name: ombi
         restart: always
@@ -140,20 +137,23 @@ services:
             - traefik_proxy
         labels:
             - "traefik.enable=true"
-            - "traefik.backend=ombi"
-            - "traefik.frontend.rule=Host:ombi.${DOMAIN}"
-    #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefix: /ombi"
+            - "traefik.http.routers.ombi.rule=Host(`ombi.${DOMAIN}`)"
             - "traefik.port=3579"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.http.middlewares.ombi-https-redirect.redirectscheme.scheme=https"
+            - "traefik.http.routers.ombi.middlewares=ombi-https-redirect"
+            - "traefik.http.middlewares.harden.headers.stsPreload=true"
+            - "traefik.http.middlewares.harden.headers.stsSeconds=31536000"
+            - "traefik.http.middlewares.harden.headers.stsIncludeSubdomains=true"
+            - "traefik.http.routers.ombi-secure.middlewares=harden"
+            - "traefik.http.routers.ombi-secure.entrypoints=web-secure"
+            - "traefik.http.routers.ombi-secure.rule=Host(`ombi.${DOMAINNAME}`)"
+            - "traefik.http.routers.ombi-secure.tls=true"
+            - "traefik.http.routers.ombi-secure.tls.certresolver=http"
+            - "traefik.http.routers.ombi-secure.tls.options=default"
+            - "traefik.http.routers.ombi-secure.service=ombi"
+            - "traefik.http.services.ombi.loadbalancer.server.port=3579"
+            
     organizr:
         container_name: organizr
         restart: always
@@ -172,19 +172,11 @@ services:
         labels:
             - "traefik.enable=true"
             - "traefik.backend=organizr"
-            - "traefik.frontend.rule=Host:organizr.${DOMAIN}"  
+            - "traefik.http.routers.organizr.rule=Host(`organizr.${DOMAIN}`)"
         #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
             - "traefik.port=80"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+
     # ----------------------------------------
     # SONARR
     # TV Series Management
@@ -203,29 +195,20 @@ services:
             - LETSENCRYPT_HOST=sonarr.${DOMAIN}
             - LETSENCRYPT_EMAIL=${EMAIL}
         volumes:
-            - './sonarr:/config'
-            - '/data/video/completed:/completed'
-            - '/data/video/downloads:/downloads'
-            - '/data/video/unprocessed:/unprocessed'
-            - '/data/video/watch:/watch'
-            - '/data/video/TV:/data/tv'
+            - '${USERDIR}/sonarr:/config'
+            - '${DATADIR}/video/completed:/completed'
+            - '${USERDIR}/data/downloads:/downloads'
+            - '${USERDIR}/data/downloads/unprocessed:/unprocessed'
+            - '${DATADIR}/video/watch:/watch'
+            - '${DATADIR}/video/TV:/data/tv'
             - '/etc/localtime:/etc/localtime:ro'
         labels:
             - "traefik.enable=true"
             - "traefik.backend=sonarr"
-            - "traefik.frontend.rule=Host:sonarr.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)"
             - "traefik.port=8989"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+
     # ----------------------------------------
     # SONARR
     # TV Series Management
@@ -244,29 +227,21 @@ services:
             - LETSENCRYPT_HOST=sonarr.${DOMAIN}
             - LETSENCRYPT_EMAIL=${EMAIL}
         volumes:
-            - './lidarr:/config'
-            - '/data/video/completed:/completed'
-            - '/data/video/downloads:/downloads'
-            - '/data/video/unprocessed:/unprocessed'
-            - '/data/video/watch:/watch'
-            - '/data/music:/music:rw'
+            - '${USERDIR}/lidarr:/config'
+            - '${DATADIR}/video/completed:/completed'
+            - '${USERDIR}/data/downloads:/downloads'
+            - '${DATADIR}/video/unprocessed:/unprocessed'
+            - '${DATADIR}/video/watch:/watch'
+            - '${DATADIR}/music:/music:rw'
             - '/etc/localtime:/etc/localtime:ro'
         labels:
             - "traefik.enable=true"
             - "traefik.backend=lidarr"
-            - "traefik.frontend.rule=Host:lidarr.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
             - "traefik.port=8686"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)"
+            
+
 
     # ----------------------------------------
     # RADARR
@@ -286,33 +261,46 @@ services:
             - LETSENCRYPT_HOST=radarr.${DOMAIN}
             - LETSENCRYPT_EMAIL=${EMAIL}
         volumes:
-            - './radarr:/config'
+            - '${USERDIR}/radarr:/config'
             - '/data/video/completed:/completed'
-            - '/data/video/downloads:/downloads'
-            - '/data/video/unprocessed:/unprocessed'
-            - '/data/video/Movies:/data/movies:rw'
+            - '${USERDIR}/data/downloads:/downloads'
+            - '${DATADIR}/video/unprocessed:/unprocessed'
+            - '${DATADIR}/video/Movies/Movies:/movies:rw'
             - '/etc/localtime:/etc/localtime:ro'
         labels:
             - "traefik.enable=true"
             - "traefik.backend=radarr"
-            - "traefik.frontend.rule=Host:radarr.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+
             - "traefik.port=7878"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+
+    mylar:
+        image: linuxserver/mylar
+        container_name: mylar
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+        network_mode: "traefik_proxy"
+        volumes:
+            - '${USERDIR}/mylar:/config'
+            - '${USERDIR}/data/downloads/books:/downloads'
+            - 'books_nas:/comics'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=mylar"
+            - "traefik.http.routers.mylar.rule=Host(`mylar.${DOMAIN}`)"
+            - "traefik.port=8090"
+            - "traefik.docker.network=traefik_proxy"
+
 
     pihole:
         image: pihole/pihole
         container_name: pihole
-        restart: on-failure
+        restart: unless-stopped
+        networks:
+            - default
+            - traefik_proxy
         ports:
             - '${IP_ADDRESS}:53:53/tcp'
             - '${IP_ADDRESS}:53:53/udp'
@@ -327,8 +315,8 @@ services:
             - DNS2="149.112.112.112"
 
         volumes:
-            - './pihole:/etc/pihole/'
-            - './pihole/dnsmasq:/etc/dnsmasq.d/'
+            - '${USERDIR}/pihole:/etc/pihole/'
+            - '${USERDIR}/pihole/dnsmasq:/etc/dnsmasq.d/'
 
 
     # ------------------------------------------
@@ -347,39 +335,30 @@ services:
             - PGID=${PGID}
             - VIRTUAL_HOST=sab.${DOMAIN}
         volumes:
-            - './sabnzbd:/config'
-            - '/data/video/downloads:/downloads'
-            - '/data/video/TV:/data/tv:rw'
-            - '/data/video/unprocessed:/unprocessed:rw'
-            - '/data/video/completed:/completed:rw'
-            - '/data/video/watch:/watch'
-            - '/data/video/Movies:/data/movies:rw'
-            - '/data/video/unprocessed:/incomplete-downloads'
+            - '${USERDIR}/sabnzbd:/config'
+            - '${USERDIR}/data/downloads:/downloads'
+            - '${DATADIR}/TV:/data/tv:rw'
+            - '${DATADIR}/unprocessed:/unprocessed:rw'
+            - '${DATADIR}/completed:/completed:rw'
+            - '${DATADIR}/watch:/watch'
+            - '${DATADIR}/Movies:/data/movies:rw'
+            - '${USERDIR}/data/downloads/unprocessed:/incomplete-downloads'
             - '/etc/localtime:/etc/localtime:ro'
         labels:
             - "traefik.enable=true"
             - "traefik.backend=sabnzbd"
-            - "traefik.frontend.rule=Host:sab.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
+            - "traefik.http.routers.sab.rule=Host(`sab.${DOMAIN}`)"  
             - "traefik.port=8080"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+
 
     hydra2:
         image: "linuxserver/hydra2"
         container_name: "hydra2"
         volumes:
             - ./hydra2:/config
-            - '/data/video/downloads:/downloads'
-            - '/media/bageera/basement/Torrents/Completed/docker/certs:/certs'
+            - '${DATADIR}/downloads:/downloads'
+            - '${USERDIR}/hydra/completed/docker/certs:/certs'
         ports:
             - "${IP_ADDRESS}:5076:5076"
         restart: always
@@ -395,10 +374,10 @@ services:
         network_mode: 'bridge'
         volumes:
             - ./docker/deluge:/config 
-            - '/data/video/downloads:/downloads:rw'
-            - '/data/video/TV:/data/tv:rw'
-            - '/data/video/completed:/completed:rw'
-            - '/data/video/watch:/watch:rw'
+            - '${DATADIR}/downloads:/downloads:rw'
+            - '${DATADIR}/TV:/data/tv:rw'
+            - '${DATADIR}/completed:/completed:rw'
+            - '${DATADIR}/watch:/watch:rw'
             - '/etc/localtime:/etc/localtime:ro'
         ports:
             - '${IP_ADDRESS}:8112:8112'
@@ -411,9 +390,6 @@ services:
             - PGID=${PGID}
             - TZ=${TZ} 
             - LAN_NETWORK=${CIDR_ADDRESS}
-
-
-
 
 
 # ----------------------------------------------------
@@ -432,6 +408,8 @@ services:
         container_name: portainer
         restart: unless-stopped
         network_mode: 'traefik_proxy'
+        depends_on:
+            - traefik
         ports:
             - '${IP_ADDRESS}:9000:9000'
         environment:
@@ -452,58 +430,14 @@ services:
         #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
             - "traefik.port=9000"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
-
-    # ----------------------------------------
-    # MUXIMUX
-    # Web Frontend for HTPC Management
-    # ----------------------------------------
-    muximux:
-        image: linuxserver/muximux
-        container_name: muximux
-        restart: unless-stopped
-        network_mode: 'traefik_proxy'
-        ports:
-            - '${IP_ADDRESS}:8080:80'
-        environment:
-            - PUID=${PUID}
-            - PGID=${PGID}
-            - VIRTUAL_HOST=manage.${DOMAIN}
-            - LETSENCRYPT_HOST=manage.${DOMAIN}
-            - LETSENCRYPT_EMAIL=${EMAIL}
-        volumes:
-            - './muximux:/config'
-            - '/etc/localtime:/etc/localtime:ro'
-        labels:
-            - "traefik.enable=true"
-            - "traefik.backend=minumix"
-            - "traefik.frontend.rule=Host:manage.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
-            - "traefik.port=80"
-            - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+            
     # ----------------------------------------
     # WATCHTOWER
     # Automatic Update Service for Docker VMs
     # ----------------------------------------
     watchtower:
-        image: kopfkrieg/watchtower
+        image: containrrr/watchtower
         container_name: tower
         restart: unless-stopped
         environment:
@@ -548,62 +482,128 @@ services:
         labels:
             - "traefik.enable=true"
             - "traefik.backend=netdata"
-            - "traefik.frontend.rule=Host:netdata.${DOMAIN}"  
-        #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /organizr"
             - "traefik.port=19999"
             - "traefik.docker.network=traefik_proxy"
-            - "traefik.frontend.headers.SSLRedirect=true"
-            - "traefik.frontend.headers.STSSeconds=315360000"
-            - "traefik.frontend.headers.browserXSSFilter=true"
-            - "traefik.frontend.headers.contentTypeNosniff=true"
-            - "traefik.frontend.headers.forceSTSHeader=true"
-            - "traefik.frontend.headers.SSLHost=panther.local"
-            - "traefik.frontend.headers.STSIncludeSubdomains=true"
-            - "traefik.frontend.headers.STSPreload=true"
-            - "traefik.frontend.headers.frameDeny=true"
+            - "traefik.http.routers.netdata.rule=Host(`netdata.${DOMAIN}`)"
+            
 
-    mongodb:
-        image: mongo:3
-
-        volumes:
-          - './mongo:/config'
-          - './mongo/data:/data/db'
-
-    elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.2
-
-        volumes:
-          - ./es/data:/usr/share/elasticsearch/data
-
-
-
-    graylog:
-        image: graylog/graylog:3.1
-        volumes:
-            - graylog_journal:/usr/share/graylog/data/journal
+    mariadb:
+        image: linuxserver/mariadb
+        container_name: mariadb
+        networks:
+            - traefik_proxy
         environment:
-            # CHANGE ME (must be at least 16 characters)!
-            - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
-            # Password: admin
-            - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
-            - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
-        links:
-            - mongodb:mongo
-            - elasticsearch
-        depends_on:
-            - mongodb
-            - elasticsearch
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+            - MYSQL_DATABASE=${NEXTCLOUD_DB}
+            - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+            - MYSQL_USER=${NEXTCLOUD_DB_USER}
+            - ${MARIADB_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+            - TZ=${TZ}
+        
+        volumes:
+            - './mariadb:/config'
         ports:
-            # Graylog web interface and REST API
-            - ${IP_ADDRESS}:9999:9000
-            # Syslog TCP
-            - 1514:1514
-            # Syslog UDP
-            - 1514:1514/udp
-            # GELF TCP
-            - 12201:12201
-            # GELF UDP
-            - 12201:12201/udp
+            - "3306:3306"
+        restart: always
+
+    openvpn-as:
+        image: linuxserver/openvpn-as
+        container_name: openvpn-as
+        cap_add:
+            - NET_ADMIN
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+            - INTERFACE=eth0 #optional
+        volumes:
+            - './openvpn:/config'
+        ports:
+            - 943:943
+            - 9443:9443
+            - 1194:1194/udp
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=openvpn"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.http.routers.openvpn.rule=Host(`openvpn.${DOMAIN}`)"
+            - "traefik.http.middlewares.openvpn-https-redirect.redirectscheme.scheme=https"
+            - "traefik.http.routers.openvpn.middlewares=openvpn-https-redirect"
+            - "traefik.http.routers.openvpn-secure.entrypoints=web-secure"
+            - "traefik.http.routers.openvpn-secure.rule=Host(`openvpn.${DOMAINNAME}`)"
+            - "traefik.http.routers.openvpn-secure.tls=true"
+            - "traefik.http.routers.openvpn-secure.tls.certresolver=http"
+            - "traefik.http.routers.openvpn-secure.service=openvpn"
+            - "traefik.http.services.openvpn.loadbalancer.server.port=943"
+
+        restart: unless-stopped
+
+    bitwarden:
+        image: bitwardenrs/server:latest
+        networks:
+            - traefik_proxy
+        environment:
+            - SIGNUPS_ALLOWED=false
+            - SMTP_HOST=${BW_SMTP}
+            - SMTP_FROM=${BW_SMTP_FROM}
+            - SMTP_PORT=${BW_SMTP_PORT}
+            - SMTP_SSL=true
+            - SMTP_USERNAME=${BW_SMTP_USERNAME}
+            - SMTP_PASSWORD=${BW_SMTP_PASSWORD}
+            - ADMIN_TOKEN=${BW_ADMIN_TOKEN}
+
+        volumes:
+            - './bw/data:/data/'
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=bitwarden"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.http.routers.bitwarden.rule=Host(`bw.${DOMAIN}`)"
+            - "traefik.http.middlewares.bitwarden-https-redirect.redirectscheme.scheme=https"
+            - "traefik.http.routers.bitwarden.middlewares=bitwarden-https-redirect"
+            - "traefik.http.routers.bitwarden-secure.entrypoints=web-secure"
+            - "traefik.http.routers.bitwarden-secure.rule=Host(`bw.${DOMAINNAME}`)"
+            - "traefik.http.routers.bitwarden-secure.tls=true"
+            - "traefik.http.routers.bitwarden-secure.tls.certresolver=http"
+            - "traefik.http.routers.bitwarden-secure.service=bitwarden"
+            - "traefik.http.services.bitwarden.loadbalancer.server.port=80"
+
+    nextcloud:
+        image: nextcloud:latest
+        networks:
+            - traefik_proxy
+        depends_on:
+            - traefik
+            - mariadb
+        volumes:
+            - './nextcloud/app:/var/www/html'
+            - '/etc/localtime:/etc/localtime:ro'
+            - 'nextcloud_htpc:/var/www/html/data'
+            - './nextcloud/app/config:/var/www/html/config'
+            - './nextcloud/app/custom_apps:/var/www/html/custom_apps'
+            - './nextcloud/app/themes:/var/www/html/themes'
+
+        environment:
+            - VIRTUAL_HOST=nextcloud.${DOMAINNAME}
+            - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+            - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+            - NEXTCLOUD_TRUSTED_DOMAINS=$NEXTCLOUD_TRUSTED_DOMAINS}
+        labels:
+            - "traefik.enable=true"
+            - "traefik.backend=nextcloud"
+            - "traefik.docker.network=traefik_proxy"
+            - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.${DOMAINNAME}`)"
+            - "traefik.http.middlewares.nextcloud-https-redirect.redirectscheme.scheme=https"
+            - "traefik.http.routers.nextcloud.middlewares=nextcloud-https-redirect"
+            - "traefik.http.routers.nextcloud-secure.entrypoints=web-secure"
+            - "traefik.http.routers.nextcloud-secure.rule=Host(`nextcloud.${DOMAINNAME}`)"
+            - "traefik.http.routers.nextcloud-secure.tls=true"
+            - "traefik.http.routers.nextcloud-secure.tls.certresolver=http"
+            - "traefik.http.routers.nextcloud-secure.service=nextcloud"
+            - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+        restart: always
 
 
 networks:
@@ -614,5 +614,22 @@ networks:
     driver: bridge
 
 volumes:
-  graylog_journal:
+  nextcloud_htpc:
     driver: local
+    driver_opts:
+        type: nfs
+        o: addr=diskstation.local,nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,rw,user,uid=33
+        device: ":/volume1/nextcloud"
+  music_nas:
+    driver: local
+    driver_opts:
+        type: nfs
+        o: addr=diskstation.local,nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,rw,user,uid=33
+        device: ":/volume1/music"
+  books_nas:
+    driver: local
+    driver_opts:
+        type: nfs 
+        o: addr=diskstation.local,nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,rw
+        device: ":/volume1/books"
+
